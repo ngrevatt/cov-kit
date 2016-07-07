@@ -29,25 +29,18 @@ def find_uninit_classes(input_file):
     return uninit_dict
 
 
-def output(uninit_dict, output_file):
-    if output_file is not None:
-        with open(output_file, 'w') as out:
-            for file in uninit_dict:
-                out.write(file + str(uninit_dict[file]) + "\n")
-    else:
-        for file in uninit_dict:
-            print(file + str(uninit_dict[file]))
+def output(uninit_dict):
+    for file in uninit_dict:
+        print(file + str(uninit_dict[file]))
 
 
 def main():
     parser = argparse.ArgumentParser()  # parse command line arguments
     parser.add_argument('-i', '--input', help='Input file name', required=False, type=str)
-    parser.add_argument('-o', '--output', help='Output file name', required=False, type=str)
     args = parser.parse_args()
 
     uninit = find_uninit_classes(args.input)  # create dictionary of files and uninitialized classes
-
-    output(uninit, args.output)
+    output(uninit)
 
 
 if __name__ == '__main__':
