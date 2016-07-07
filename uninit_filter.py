@@ -1,11 +1,13 @@
 #!/usr/bin/python
 import re
+import sys
+import getopt
 from coverage import CoverageData
 
 
-def find_uninit_classes(coverage_file):
+def find_uninit_classes(input_file):
     data = CoverageData()
-    data.read_file('.coverage')
+    data.read_file(input_file)
 
     re_cls = re.compile(r'^class\s(.+)[\(|:]')
     re_init = re.compile(r'def\s__init__')
@@ -27,9 +29,25 @@ def find_uninit_classes(coverage_file):
 
 
 def main():
-    uninit = find_uninit('.coverage')
-    for file in uninit:
-        print(file, uninit[file], "\n")
+    ifile = '.coverage'  # set defaults
+    ofile = None
+
+    opts, args = getopt.getopt(sys.argv[1:], "i:o:")  # parse command line args
+    for opt, arg in opts:
+        if opt == '-i':
+            ifile = arg
+        elif opt == '-o':
+            ofile = arg
+
+    uninit = find_uninit_classes(ifile)  # create dictionary of files and uninitialized classes
+
+    if ofile is not None:  # output
+        with open(ofile, 'w') as out:
+            for file in uninit:
+                out.write(file + str(uninit[file]) + "\n")
+    else:
+        for file in uninit:
+            print(file, uninit[file], "\n")
 
 
 if __name__ == '__main__':
