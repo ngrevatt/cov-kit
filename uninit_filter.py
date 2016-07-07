@@ -1,11 +1,12 @@
 #!/usr/bin/python
 import re
-import sys
-import getopt
+import argparse
 from coverage import CoverageData
 
 
 def find_uninit_classes(input_file):
+    if input_file is None:
+        input_file = '.coverage'
     data = CoverageData()
     data.read_file(input_file)
 
@@ -29,25 +30,20 @@ def find_uninit_classes(input_file):
 
 
 def main():
-    ifile = '.coverage'  # set defaults
-    ofile = None
+    parser = argparse.ArgumentParser()  # parse command line arguments
+    parser.add_argument('-i', '--input', help='Input file name', required=False, type=str)
+    parser.add_argument('-o', '--output', help='Output file name', required=False, type=str)
+    args = parser.parse_args()
 
-    opts, args = getopt.getopt(sys.argv[1:], "i:o:")  # parse command line args
-    for opt, arg in opts:
-        if opt == '-i':
-            ifile = arg
-        elif opt == '-o':
-            ofile = arg
+    uninit = find_uninit_classes(args.input)  # create dictionary of files and uninitialized classes
 
-    uninit = find_uninit_classes(ifile)  # create dictionary of files and uninitialized classes
-
-    if ofile is not None:  # output
-        with open(ofile, 'w') as out:
+    if args.output is not None:  # output
+        with open(args.output, 'w') as out:
             for file in uninit:
                 out.write(file + str(uninit[file]) + "\n")
     else:
         for file in uninit:
-            print(file, uninit[file], "\n")
+            print(file, uninit[file])
 
 
 if __name__ == '__main__':
