@@ -15,23 +15,24 @@ def find_uninit_classes(input_file):
     current_cls = None
     uninit_dict = {}
 
-    for file in data.measured_files():
-        with open(file, 'r') as f:
+    for file_name in data.measured_files():
+        with open(file_name, 'r') as f:
             for i, line in enumerate(f):
                 current_line = i + 1
                 if line.startswith('class'):
                     current_cls = re_cls.match(line).group(1)
-                elif re_init.search(line) and (current_line) not in data.lines(file):
-                    if file not in uninit_dict:
-                        uninit_dict[file] = []
-                    uninit_dict[file].append(current_cls)
+                elif re_init.search(line) and (current_line) not in data.lines(file_name):
+                    if file_name not in uninit_dict:
+                        uninit_dict[file_name] = []
+                    uninit_dict[file_name].append(current_cls)
 
     return uninit_dict
 
 
 def output(uninit_dict):
-    for file in uninit_dict:
-        print('{}: {}'.format(file, uninit_dict[file]))
+    for file_name, cls_list in uninit_dict.items():
+        for cls_name in cls_list:
+            print('{}: {}'.format(file_name, cls_name))
 
 
 def main():
