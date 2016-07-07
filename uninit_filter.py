@@ -31,7 +31,7 @@ def find_uninit_classes(input_file):
 
 def output(uninit_dict):
     for file in uninit_dict:
-        print(file + str(uninit_dict[file]))
+        print('{}: {}'.format(file, uninit_dict[file]))
 
 
 def main():
