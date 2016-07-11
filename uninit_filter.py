@@ -5,18 +5,12 @@ from coverage import CoverageData
 
 
 def get_cov_data(input_file):
-    if input_file is None:
-        input_file = '.coverage'
     data = CoverageData()
     data.read_file(input_file)
     return data
 
 
-def find_uninit_classes(input_file):
-    if input_file is None:
-        input_file = '.coverage'
-    data = get_cov_data(input_file)
-
+def find_uninit_classes(data):
     re_cls = re.compile(r'^class\s(.+)[\(|:]')
     re_init = re.compile(r'def\s__init__')
     current_cls = None
@@ -26,7 +20,7 @@ def find_uninit_classes(input_file):
         with open(file_name, 'r') as f:
             covered_lines = set(data.lines(file_name))
             for i, line in enumerate(f):
-                current_line = i
+                current_line = i + 1
                 if line.startswith('class'):
                     current_cls = re_cls.match(line).group(1)
                 elif re_init.search(line) and current_line not in covered_lines:
@@ -37,8 +31,7 @@ def find_uninit_classes(input_file):
     return uninit_dict
 
 
-def output(input_file, uninit_dict):
-    data = get_cov_data(input_file)
+def output(data, uninit_dict):
     output_map = data.line_counts(fullpath=True)
     s = sorted(uninit_dict.keys(), reverse=True, key=lambda x: output_map[x])
     for file_name in s:
@@ -50,11 +43,12 @@ def output(input_file, uninit_dict):
 
 def main():
     parser = argparse.ArgumentParser()  # parse command line arguments
-    parser.add_argument('-i', '--input', help='Input file name', required=False, type=str)
+    parser.add_argument('-i', '--input', default='.coverage', help='Input file name', required=False, type=str)
     args = parser.parse_args()
+    data = get_cov_data(args.input)
 
-    uninit = find_uninit_classes(args.input)  # create dictionary of files and uninitialized classes
-    output(args.input, uninit)
+    uninit = find_uninit_classes(data)  # create dictionary of files and uninitialized classes
+    output(data, uninit)
 
 
 if __name__ == '__main__':
