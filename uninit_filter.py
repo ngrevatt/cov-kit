@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import re
+import os
 import argparse
 from coverage import CoverageData
 
@@ -33,10 +34,20 @@ def find_uninit_classes(data):
     return uninit_dict
 
 
+def get_directory_location(data):
+    directory_path = os.path.commonpath(data.measured_files())
+    directory_location = os.path.dirname(directory_path)
+    return directory_location
+
+
+def trim_file_name(directory_location, file_name):
+    return file_name.split(directory_location)[-1]
+
+
 def output(data, uninit_dict):
     s = sorted(uninit_dict.keys(), reverse=True, key=lambda x: uninit_dict[x][0])
     for file_name in s:
-        print('{} ({}%):'.format(file_name, uninit_dict[file_name][0]))  # percent_coverage is the first item in the list
+        print('{} ({}%):'.format(trim_file_name(get_directory_location(data), file_name), uninit_dict[file_name][0]))  # percent_cmverage is the first item in the list
         for cls_name in uninit_dict[file_name][1:]:
             print('\t{}'.format(cls_name))
         print("\n")
