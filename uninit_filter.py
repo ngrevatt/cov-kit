@@ -19,15 +19,17 @@ def find_uninit_classes(data):
     for file_name in data.measured_files():
         with open(file_name, 'r') as f:
             covered_lines = set(data.lines(file_name))
+            covered_count = len(covered_lines)
+            percent_coverage = 0
             for i, line in enumerate(f):
-                current_line = i + 1
+                line_number = i + 1
                 if line.startswith('class'):
                     current_cls = re_cls.match(line).group(1)
-                elif re_init.search(line) and current_line not in covered_lines:
+                elif re_init.search(line) and line_number not in covered_lines:
                     if file_name not in uninit_dict:
-                        uninit_dict[file_name] = []
+                        uninit_dict[file_name] = [percent_coverage]
                     uninit_dict[file_name].append(current_cls)
-
+                    uninit_dict[file_name][0] = str(covered_count / line_number)
     return uninit_dict
 
 
@@ -35,8 +37,8 @@ def output(data, uninit_dict):
     output_map = data.line_counts(fullpath=True)
     s = sorted(uninit_dict.keys(), reverse=True, key=lambda x: output_map[x])
     for file_name in s:
-        print(file_name + ":")
-        for cls_name in uninit_dict[file_name]:
+        print('{} ({}%):'.format(file_name, uninit_dict[file_name][0]))  # percent_coverage is the first item in the list
+        for cls_name in uninit_dict[file_name][1:]:
             print('\t{}'.format(cls_name))
         print("\n")
 
