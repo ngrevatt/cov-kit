@@ -34,8 +34,7 @@ def find_uninit_classes(data):
 
 
 def output(data, uninit_dict):
-    output_map = data.line_counts(fullpath=True)
-    s = sorted(uninit_dict.keys(), reverse=True, key=lambda x: output_map[x])
+    s = sorted(uninit_dict.keys(), reverse=True, key=lambda x: uninit_dict[x][0])
     for file_name in s:
         print('{} ({}%):'.format(file_name, uninit_dict[file_name][0]))  # percent_coverage is the first item in the list
         for cls_name in uninit_dict[file_name][1:]:
