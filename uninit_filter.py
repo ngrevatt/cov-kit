@@ -24,7 +24,7 @@ def get_analysis(cov, data):
     return analysis
 
 
-def find_uninit_classes(data, analysis):
+def find_uninit_classes(analysis):
     re_cls = re.compile(r'^class\s(.+)[\(|:]')
     re_init = re.compile(r'def\s__init__')
     current_cls = None
@@ -32,9 +32,7 @@ def find_uninit_classes(data, analysis):
 
     for file_name in analysis:  # keys in analysis are file_names
         with open(file_name, 'r') as f:
-            executable_lines = analysis[file_name][1]
-            excluded_lines = analysis[file_name][2]
-            covered_lines = set(data.lines(file_name))
+            _, executable_lines, excluded_lines, missing_lines, __ = analysis[file_name]
             uninit_list = []
             in_init = False
             for line_number, line in enumerate(f, 1):
@@ -42,11 +40,11 @@ def find_uninit_classes(data, analysis):
                     current_cls = re_cls.match(line).group(1)
                 elif re_init.search(line):
                     in_init = True
-                elif in_init and line_number in executable_lines and line_number not in covered_lines:
+                elif in_init and line_number in executable_lines and line_number in missing_lines:
                     uninit_list.append(current_cls)
                     in_init = False
             if uninit_list:
-                uninit_dict[file_name] = (len(covered_lines) / (line_number - len(excluded_lines)), uninit_list)
+                uninit_dict[file_name] = ((len(executable_lines) - len(missing_lines)) / len(executable_lines), uninit_list)
     return uninit_dict
 
 
@@ -78,7 +76,7 @@ def main():
     analysis = get_analysis(cov, data)
 
     # create dictionary of files and uninitialized classes
-    uninit = find_uninit_classes(data, analysis)
+    uninit = find_uninit_classes(analysis)
     output(data, uninit)
 
 
