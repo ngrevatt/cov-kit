@@ -2,7 +2,13 @@
 import re
 import os
 import argparse
-from coverage import CoverageData
+from coverage import Coverage, CoverageData
+
+
+def get_cov(input_file):
+    cov = Coverage(data_file=input_file)
+    cov.load()
+    return cov
 
 
 def get_cov_data(input_file):
@@ -11,31 +17,36 @@ def get_cov_data(input_file):
     return data
 
 
-def find_uninit_classes(data):
+def get_analysis(cov, data):
+    analysis = {}
+    for file_name in data.measured_files():
+        analysis[file_name] = cov.analysis2(file_name)
+    return analysis
+
+
+def find_uninit_classes(data, analysis):
     re_cls = re.compile(r'^class\s(.+)[\(|:]')
     re_init = re.compile(r'def\s__init__')
     current_cls = None
     uninit_dict = {}
 
-    for file_name in data.measured_files():
+    for file_name in analysis:  # keys in analysis are file_names
         with open(file_name, 'r') as f:
+            executable_lines = analysis[file_name][1]
+            excluded_lines = analysis[file_name][2]
             covered_lines = set(data.lines(file_name))
-            covered_count = len(covered_lines)
-            percent_coverage = 0
+            uninit_list = []
             in_init = False
-
             for line_number, line in enumerate(f, 1):
                 if line.startswith('class'):
                     current_cls = re_cls.match(line).group(1)
                 elif re_init.search(line):
                     in_init = True
-                elif in_init and not line.isspace() and line_number not in covered_lines:
-                    uninit_dict.setdefault(file_name, [percent_coverage]).append(current_cls)
+                elif in_init and line_number in executable_lines and line_number not in covered_lines:
+                    uninit_list.append(current_cls)
                     in_init = False
-            try:
-                uninit_dict[file_name][0] = str(covered_count / line_number)
-            except KeyError:
-                pass
+            if uninit_list:
+                uninit_dict[file_name] = (len(covered_lines) / (line_number - len(excluded_lines)), uninit_list)
     return uninit_dict
 
 
@@ -49,10 +60,10 @@ def output(data, uninit_dict):
     for file_name in s:
         trimmed_name = trim_file_name(data, file_name)
         # unpack, coverage is first index, followed by classes
-        coverage, *classes = uninit_dict[file_name]
+        coverage, uninit_list = uninit_dict[file_name]
         # percent_cmverage is the first item in the list
         print('{} ({}%):'.format(trimmed_name, coverage))
-        for cls_name in classes:
+        for cls_name in uninit_list:
             print('\t{}'.format(cls_name))
         print("\n")
 
@@ -62,10 +73,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', default='.coverage', help='Input file name', required=False, type=str)
     args = parser.parse_args()
+    cov = get_cov(args.input)
     data = get_cov_data(args.input)
+    analysis = get_analysis(cov, data)
 
     # create dictionary of files and uninitialized classes
-    uninit = find_uninit_classes(data)
+    uninit = find_uninit_classes(data, analysis)
     output(data, uninit)
 
 
