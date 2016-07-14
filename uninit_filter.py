@@ -27,27 +27,22 @@ def find_uninit_classes(data):
                 if line.startswith('class'):
                     current_cls = re_cls.match(line).group(1)
                 elif re_init.search(line) and line_number not in covered_lines:
-                    if file_name not in uninit_dict:
-                        uninit_dict[file_name] = [percent_coverage]
-                    uninit_dict[file_name].append(current_cls)
+                    uninit_dict.setdefault(file_name, [percent_coverage]).append(current_cls)
                     uninit_dict[file_name][0] = str(covered_count / line_number)
+
     return uninit_dict
 
 
-def get_directory_location(data):
-    directory_path = os.path.commonpath(data.measured_files())
-    directory_location = os.path.dirname(directory_path)
-    return directory_location
-
-
-def trim_file_name(directory_location, file_name):
-    return file_name.split(directory_location)[-1]
+def trim_file_name(data, file_name):
+    directory_path = os.path.dirname(os.path.commonpath(data.measured_files()))
+    return file_name.split(directory_path)[-1]
 
 
 def output(data, uninit_dict):
     s = sorted(uninit_dict.keys(), reverse=True, key=lambda x: uninit_dict[x][0])
     for file_name in s:
-        print('{} ({}%):'.format(trim_file_name(get_directory_location(data), file_name), uninit_dict[file_name][0]))  # percent_cmverage is the first item in the list
+        trimmed_name = trim_file_name(data, file_name)
+        print('{} ({}%):'.format(trimmed_name, uninit_dict[file_name][0]))  # percent_cmverage is the first item in the list
         for cls_name in uninit_dict[file_name][1:]:
             print('\t{}'.format(cls_name))
         print("\n")
