@@ -40,8 +40,9 @@ def find_uninit_classes(analysis):
                     current_cls = re_cls.match(line).group(1)
                 elif re_init.search(line):
                     in_init = True
-                elif in_init and line_number in executable_lines and line_number in missing_lines:
-                    uninit_list.append(current_cls)
+                elif in_init and line_number in executable_lines:
+                    if line_number in missing_lines:
+                        uninit_list.append(current_cls)
                     in_init = False
             if uninit_list:
                 uninit_dict[file_name] = ((len(executable_lines) - len(missing_lines)) / len(executable_lines), uninit_list)
