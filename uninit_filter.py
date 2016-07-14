@@ -22,14 +22,20 @@ def find_uninit_classes(data):
             covered_lines = set(data.lines(file_name))
             covered_count = len(covered_lines)
             percent_coverage = 0
-            for i, line in enumerate(f):
-                line_number = i + 1
+            in_init = False
+
+            for line_number, line in enumerate(f, 1):
                 if line.startswith('class'):
                     current_cls = re_cls.match(line).group(1)
-                elif re_init.search(line) and line_number not in covered_lines:
+                elif re_init.search(line):
+                    in_init = True
+                elif in_init and not line.isspace() and line_number not in covered_lines:
                     uninit_dict.setdefault(file_name, [percent_coverage]).append(current_cls)
-                    uninit_dict[file_name][0] = str(covered_count / line_number)
-
+                    in_init = False
+            try:
+                uninit_dict[file_name][0] = str(covered_count / line_number)
+            except KeyError:
+                pass
     return uninit_dict
 
 
