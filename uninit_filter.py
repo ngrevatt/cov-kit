@@ -42,19 +42,24 @@ def output(data, uninit_dict):
     s = sorted(uninit_dict.keys(), reverse=True, key=lambda x: uninit_dict[x][0])
     for file_name in s:
         trimmed_name = trim_file_name(data, file_name)
-        print('{} ({}%):'.format(trimmed_name, uninit_dict[file_name][0]))  # percent_cmverage is the first item in the list
-        for cls_name in uninit_dict[file_name][1:]:
+        # unpack, coverage is first index, followed by classes
+        coverage, *classes = uninit_dict[file_name]
+        # percent_cmverage is the first item in the list
+        print('{} ({}%):'.format(trimmed_name, coverage))
+        for cls_name in classes:
             print('\t{}'.format(cls_name))
         print("\n")
 
 
 def main():
-    parser = argparse.ArgumentParser()  # parse command line arguments
+    # parse command line arguments
+    parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', default='.coverage', help='Input file name', required=False, type=str)
     args = parser.parse_args()
     data = get_cov_data(args.input)
 
-    uninit = find_uninit_classes(data)  # create dictionary of files and uninitialized classes
+    # create dictionary of files and uninitialized classes
+    uninit = find_uninit_classes(data)
     output(data, uninit)
 
 
