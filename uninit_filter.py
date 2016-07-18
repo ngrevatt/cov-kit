@@ -24,29 +24,48 @@ def get_analysis(cov, data):
     return analysis
 
 
-def find_uninit_classes(analysis):
+def find_uncovered(analysis):
     re_cls = re.compile(r'^class\s(.+)[\(|:]')
     re_init = re.compile(r'def\s__init__')
+    re_func = re.compile(r'^def\s(.+)[\(|:]')
     current_cls = None
-    uninit_dict = {}
+    current_func = None
+    coverages = {}
+    classes = {}
+    functions = {}
 
     for file_name in analysis:  # keys in analysis are file_names
         with open(file_name, 'r') as f:
             _, executable_lines, excluded_lines, missing_lines, __ = analysis[file_name]
-            uninit_list = []
+            uncov_classes = []
+            uncov_functions = []
             in_init = False
+            in_func = False
             for line_number, line in enumerate(f, 1):
+                # handling uninitialized classes
                 if line.startswith('class'):
                     current_cls = re_cls.match(line).group(1)
                 elif re_init.search(line):
                     in_init = True
                 elif in_init and line_number in executable_lines:
                     if line_number in missing_lines:
-                        uninit_list.append(current_cls)
+                        uncov_classes.append(current_cls)
                     in_init = False
-            if uninit_list:
-                uninit_dict[file_name] = ((len(executable_lines) - len(missing_lines)) / len(executable_lines), uninit_list)
-    return uninit_dict
+                # handling uninitalized functions
+                if line.startswith('def'):
+                    current_func = re_func.match(line).group(1)
+                    in_func = True
+                elif in_func and line_number in executable_lines:
+                    if line_number in missing_lines:
+                        uncov_functions.append(current_func)
+                    in_func = False
+            if executable_lines:
+                coverages[file_name] = (len(executable_lines) - len(missing_lines)) / len(executable_lines)
+            if uncov_classes:
+                classes[file_name] = uncov_classes 
+            if uncov_functions:
+                functions[file_name] = uncov_functions 
+    return coverages, classes, functions
 
 
 def trim_file_name(data, file_name):
@@ -54,17 +73,22 @@ def trim_file_name(data, file_name):
     return file_name.split(directory_path)[-1]
 
 
-def output(data, uninit_dict):
-    s = sorted(uninit_dict.keys(), reverse=True, key=lambda x: uninit_dict[x][0])
+def output(data, coverages, classes, functions):
+    s = sorted(coverages, reverse=True, key=coverages.get)
     for file_name in s:
-        trimmed_name = trim_file_name(data, file_name)
-        # unpack, coverage is first index, followed by classes
-        coverage, uninit_list = uninit_dict[file_name]
-        # percent_cmverage is the first item in the list
-        print('{} ({}%):'.format(trimmed_name, coverage))
-        for cls_name in uninit_list:
-            print('\t{}'.format(cls_name))
-        print("\n")
+        if file_name in classes or file_name in functions:
+            trimmed_name = trim_file_name(data, file_name)
+            # percent_cmverage is the first item in the list
+            print('{} ({:2.2f}%):'.format(trimmed_name, coverages[file_name]*100))
+            if file_name in classes:
+                print('Uninitialized Classes:')
+                for cls_name in classes[file_name]:
+                    print('\t{}'.format(cls_name))
+            if file_name in functions:
+                print('Unused Functions:')
+                for func_name in functions[file_name]:
+                    print('\t{}'.format(func_name))
+            print('\n')
 
 
 def main():
@@ -77,8 +101,8 @@ def main():
     analysis = get_analysis(cov, data)
 
     # create dictionary of files and uninitialized classes
-    uninit = find_uninit_classes(analysis)
-    output(data, uninit)
+    coverages, classes, functions = find_uncovered(analysis)
+    output(data, coverages, classes, functions)
 
 
 if __name__ == '__main__':
